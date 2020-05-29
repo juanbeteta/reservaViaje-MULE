@@ -1,0 +1,13 @@
+{
+    "inputMessageMetadata": {
+        "flowVariables": {
+            "reserva": {
+                "connectorName": "#_custom_mule_metadata_type_#",
+                "typeId": "pay"
+            }
+        }
+    },
+    "outputMessageMetadata": {},
+    "id": "7a8f01d9-f5e4-4c64-b5c9-1ea1c73e90dd",
+    "version": "5.2.0.0"
+}

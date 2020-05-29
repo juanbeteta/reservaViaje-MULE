@@ -15,6 +15,33 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
         <http:listener config-ref="HTTP_Listener_Configuration" path="/reserva" doc:name="HTTP"/>
         <json:json-to-object-transformer doc:name="JSON to Object"/>
         <set-variable variableName="reserva" value="#[payload]" doc:name="Variable"/>
+        <dw:transform-message doc:name="Copy_of_Transform Message" metadata:id="16a19e47-e007-497e-9fa4-e2918713dbb2">
+            <dw:input-variable mimeType="application/json" variableName="reserva"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	usuario: flowVars.reserva.login.usuario,
+	password: flowVars.reserva.login.password
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <http:request config-ref="HTTP_Request_Configuration" path="/usuario/verificar" method="POST" doc:name="Copy_of_HTTP_usuario_verificar">
+            <http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+            </http:request-builder>
+            <http:success-status-code-validator values="200..500"/>
+        </http:request>
+        <dw:transform-message doc:name="Copy_of_Transform Message" metadata:id="036120e0-ff1d-4865-879e-939e566e56f0">
+            <dw:input-payload doc:sample="C:\MTIS\workspaceAnypointStudio\reserva_viaje\json\s_avion_validar.json" mimeType="application/json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	allOk: payload.allOk,
+	descuento: payload.descuento
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <set-variable variableName="usuario_registrado" value="#[payload]" doc:name="Variable"/>
         <flow-ref name="reserva_avion" doc:name="Flow Reference"/>
         <catch-exception-strategy doc:name="Catch Exception Strategy">
             <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
@@ -69,34 +96,8 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
         </http:request>
         <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
         <set-variable variableName="precio_avion" value="#[payload]" doc:name="Variable"/>
-        <dw:transform-message doc:name="Transform Message" metadata:id="16a19e47-e007-497e-9fa4-e2918713dbb2">
-            <dw:input-variable mimeType="application/json" variableName="reserva"/>
-            <dw:set-payload><![CDATA[%dw 1.0
-%output application/json
----
-{
-	usuario: flowVars.reserva.login.usuario,
-	password: flowVars.reserva.login.password
-}]]></dw:set-payload>
-        </dw:transform-message>
-        <http:request config-ref="HTTP_Request_Configuration" path="/usuario/verificar" method="POST" doc:name="HTTP_usuario_verificar">
-            <http:request-builder>
-                <http:header headerName="Content-Type" value="application/json"/>
-            </http:request-builder>
-            <http:success-status-code-validator values="200..500"/>
-        </http:request>
-        <dw:transform-message doc:name="Transform Message" metadata:id="036120e0-ff1d-4865-879e-939e566e56f0">
-            <dw:input-payload doc:sample="C:\MTIS\workspaceAnypointStudio\reserva_viaje\json\s_avion_validar.json" mimeType="application/json"/>
-            <dw:set-payload><![CDATA[%dw 1.0
-%output application/java
----
-{
-	allOk: payload.allOk,
-	descuento: payload.descuento
-}]]></dw:set-payload>
-        </dw:transform-message>
         <choice doc:name="Descuento???">
-            <when expression="#[payload.allOk == 'true' &amp;&amp; payload.descuento == 0]">
+            <when expression="#[usuario_registrado.allOk == 'true' &amp;&amp; usuario_registrado.descuento == 1]">
                 <http:request config-ref="HTTP_Request_Configuration" path="/avion/descuento" method="GET" doc:name="HTTP">
                     <http:request-builder>
                         <http:header headerName="precio" value="#[flowVars.precio_avion.precio]"/>
@@ -139,7 +140,209 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 	precio: flowVars.descuento_avion.descuento
 }]]></dw:set-payload>
         </dw:transform-message>
-        <http:request config-ref="HTTP_Request_Configuration" path="/avion/reservaAvion" method="POST" doc:name="HTTP">
+        <http:request config-ref="HTTP_Request_Configuration" path="/avion/reservaAvion" method="POST" doc:name="HTTP_reserva">
+            <http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+            </http:request-builder>
+        </http:request>
+        <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
+        <set-variable variableName="resultado_avion" value="#[payload]" doc:name="Variable"/>
+        <flow-ref name="reserva_hotel" doc:name="Flow Reference"/>
+    </sub-flow>
+    <sub-flow name="reserva_hotel">
+        <dw:transform-message doc:name="Transform Message" metadata:id="d8a2a4f0-bb47-42d5-ab97-aae7ebd931b2">
+            <dw:input-variable mimeType="application/json" variableName="reserva"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	fecha_checkin: flowVars.reserva.hotel.fecha_checkin,
+	fecha_checkout: flowVars.reserva.hotel.fecha_checkout
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <http:request config-ref="HTTP_Request_Configuration" path="/hotel/validar" method="POST" doc:name="HTTP_validar">
+            <http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+            </http:request-builder>
+        </http:request>
+        <dw:transform-message doc:name="Transform Message" metadata:id="bc7f4c86-5480-41c2-8558-9aa837c1b78e">
+            <dw:input-variable mimeType="application/json" variableName="reserva"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	fecha_checkin: flowVars.reserva.hotel.fecha_checkin,
+    fecha_checkout: flowVars.reserva.hotel.fecha_checkout,
+    tipo_habitacion: flowVars.reserva.hotel.tipo_habitacion,
+    cama_supletoria: flowVars.reserva.hotel.cama_supletoria
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <http:request config-ref="HTTP_Request_Configuration" path="/hotel/disponibilidad" method="POST" doc:name="HTTP_disponibilidad">
+            <http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+            </http:request-builder>
+        </http:request>
+        <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
+        <set-variable variableName="precio_hotel" value="#[payload]" doc:name="Variable"/>
+        <choice doc:name="Descuento???">
+            <when expression="#[usuario_registrado.allOk == 'true' &amp;&amp; usuario_registrado.descuento == 1]">
+                <http:request config-ref="HTTP_Request_Configuration" path="/hotel/descuento" method="GET" doc:name="HTTP">
+                    <http:request-builder>
+                        <http:header headerName="precio" value="#[flowVars.precio_hotel.precio]"/>
+                    </http:request-builder>
+                </http:request>
+                <dw:transform-message doc:name="Transform Message">
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	descuento:payload.descuento
+}]]></dw:set-payload>
+                </dw:transform-message>
+            </when>
+            <otherwise>
+                <dw:transform-message doc:name="Transform Message">
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	descuento: flowVars.precio_hotel.precio
+}]]></dw:set-payload>
+                </dw:transform-message>
+            </otherwise>
+        </choice>
+        <set-variable variableName="descuento_hotel" value="#[payload]" doc:name="descuento_hotel"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="bdc663d1-d9ab-4939-a1b9-cffed9512721">
+            <dw:input-variable mimeType="application/json" variableName="reserva"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	reserva_id: flowVars.reserva.hotel.reserva_id,
+    fecha_checkin: flowVars.reserva.hotel.fecha_checkin,
+    fecha_checkout: flowVars.reserva.hotel.fecha_checkout,
+    tipo_habitacion: flowVars.reserva.hotel.tipo_habitacion,
+    cama_supletoria: flowVars.reserva.hotel.cama_supletoria,
+    precio: flowVars.descuento_hotel.descuento
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <http:request config-ref="HTTP_Request_Configuration" path="/hotel/reservaHotel" method="POST" doc:name="HTTP_reserva">
+            <http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+            </http:request-builder>
+        </http:request>
+        <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
+        <set-variable variableName="resultado_hotel" value="#[payload]" doc:name="Variable"/>
+        <flow-ref name="reserva_coche" doc:name="Flow Reference"/>
+    </sub-flow>
+    <sub-flow name="reserva_coche">
+        <dw:transform-message doc:name="Transform Message" metadata:id="7a8f01d9-f5e4-4c64-b5c9-1ea1c73e90dd">
+            <dw:input-variable mimeType="application/json" variableName="reserva"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	fecha_recogida: flowVars.reserva.coche.fecha_recogida,
+	fecha_devolucion: flowVars.reserva.coche.fecha_devolucion,
+	lugar_recogida: flowVars.reserva.coche.lugar_recogida,
+	lugar_devolucion: flowVars.reserva.coche.lugar_devolucion
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <http:request config-ref="HTTP_Request_Configuration" path="/coche/validar" method="POST" doc:name="HTTP_validar">
+            <http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+            </http:request-builder>
+        </http:request>
+        <dw:transform-message doc:name="Transform Message" metadata:id="d8b5c11d-afab-4896-8e33-a017d35ad7d0">
+            <dw:input-variable mimeType="application/json" variableName="reserva"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	fecha_recogida: flowVars.reserva.coche.fecha_recogida,
+	fecha_devolucion: flowVars.reserva.coche.fecha_devolucion,
+	lugar_recogida: flowVars.reserva.coche.lugar_recogida,
+	lugar_devolucion: flowVars.reserva.coche.lugar_devolucion,
+	tanque_lleno: flowVars.reserva.coche.tanque_lleno
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <http:request config-ref="HTTP_Request_Configuration" path="/coche/disponibilidad" method="POST" doc:name="HTTP_disponibilidad">
+            <http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+            </http:request-builder>
+        </http:request>
+        <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
+        <set-variable variableName="precio_coche" value="#[payload]" doc:name="Variable"/>
+        <choice doc:name="Descuento???">
+            <when expression="#[usuario_registrado.allOk == 'true' &amp;&amp; usuario_registrado.descuento == 1]">
+                <http:request config-ref="HTTP_Request_Configuration" path="/coche/descuento" method="GET" doc:name="HTTP">
+                    <http:request-builder>
+                        <http:header headerName="precio" value="#[flowVars.precio_coche.precio]"/>
+                    </http:request-builder>
+                </http:request>
+                <dw:transform-message doc:name="Transform Message">
+                    <dw:input-payload doc:sample="sample_data\json_3.json"/>
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	descuento:payload.descuento
+}]]></dw:set-payload>
+                </dw:transform-message>
+            </when>
+            <otherwise>
+                <dw:transform-message doc:name="Transform Message">
+                    <dw:input-payload/>
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	descuento: flowVars.precio_hotel.precio
+}]]></dw:set-payload>
+                </dw:transform-message>
+            </otherwise>
+        </choice>
+        <set-variable variableName="descuento_coche" value="#[payload]" doc:name="descuento_coche"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="1a45f64e-6393-4f3f-ac3d-63cdd71fe65a">
+            <dw:input-variable mimeType="application/json" variableName="reserva"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	reserva_id: flowVars.reserva.coche.reserva_id,
+	fecha_recogida:flowVars.reserva.coche.fecha_recogida,
+	fecha_devolucion: flowVars.reserva.coche.fecha_devolucion,
+	lugar_recogida: flowVars.reserva.coche.lugar_recogida,
+	lugar_devolucion: flowVars.reserva.coche.lugar_devolucion,
+	tanque_lleno: flowVars.reserva.coche.tanque_lleno,
+	precio: flowVars.descuento_coche.descuento
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <http:request config-ref="HTTP_Request_Configuration" path="/coche/reservaCoche" method="POST" doc:name="HTTP_reserva">
+            <http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+            </http:request-builder>
+        </http:request>
+        <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
+        <set-variable variableName="resultado_coche" value="#[payload]" doc:name="Variable"/>
+        <flow-ref name="reserva_total" doc:name="Flow Reference"/>
+    </sub-flow>
+    <sub-flow name="reserva_total">
+        <set-variable variableName="suma_total" value="#[flowVars.resultado_avion.precio  + flowVars.resultado_coche.precio + flowVars.resultado_hotel.precio]  " doc:name="Variable"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="00698de6-f7ff-4af8-8b87-60e6a5f5cc73">
+            <dw:input-variable mimeType="application/json" variableName="reserva"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	usuario: flowVars.reserva.login.usuario,
+	vuelo_id: flowVars.resultado_coche.coche_id,
+	hotel_id: flowVars.resultado_hotel.hotel_id,
+	coche_id: flowVars.resultado_coche.coche_id,
+	precio: flowVars.suma_total
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <http:request config-ref="HTTP_Request_Configuration" path="/reservaViaje" method="POST" doc:name="HTTP">
             <http:request-builder>
                 <http:header headerName="Content-Type" value="application/json"/>
             </http:request-builder>
