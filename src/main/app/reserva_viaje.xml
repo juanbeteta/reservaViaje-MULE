@@ -342,9 +342,16 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 	precio: flowVars.suma_total
 }]]></dw:set-payload>
         </dw:transform-message>
-        <http:request config-ref="HTTP_Request_Configuration" path="/reservaViaje" method="POST" doc:name="HTTP">
+        <http:request config-ref="HTTP_Request_Configuration" path="/reservaViaje" method="POST" doc:name="HTTP_reserva">
             <http:request-builder>
                 <http:header headerName="Content-Type" value="application/json"/>
+            </http:request-builder>
+        </http:request>
+        <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
+        <set-variable variableName="getReserva" value="#[payload]" doc:name="Variable"/>
+        <http:request config-ref="HTTP_Request_Configuration" path="/factura" method="GET" doc:name="HTTP">
+            <http:request-builder>
+                <http:header headerName="id" value="#[flowVars.getReserva.viaje_id]"/>
             </http:request-builder>
         </http:request>
     </sub-flow>
