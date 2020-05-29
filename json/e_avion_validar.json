@@ -1,0 +1,9 @@
+{
+		"reserva_id": 1,
+		"fecha_ida": "10-10-10",
+		"fecha_regreso": "11-10-10",
+		"cantidad_personas": 11,
+		"lugar_origen": "alicante",
+		"lugar_destino": "madrid",
+		"precio": 12
+}

@@ -1,0 +1,18 @@
+{
+    "inputMessageMetadata": {
+        "flowVariables": {
+            "reserva": {
+                "connectorName": "#_custom_mule_metadata_type_#",
+                "typeId": "pay"
+            }
+        }
+    },
+    "outputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "e_avion_validar"
+        }
+    },
+    "id": "b3bad7d2-69a4-4ac6-bb0f-a2248c6486f4",
+    "version": "5.2.0.0"
+}

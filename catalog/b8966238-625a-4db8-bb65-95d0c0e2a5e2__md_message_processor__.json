@@ -1,0 +1,11 @@
+{
+    "inputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "s_avion_validar"
+        }
+    },
+    "outputMessageMetadata": {},
+    "id": "b8966238-625a-4db8-bb65-95d0c0e2a5e2",
+    "version": "5.2.0.0"
+}

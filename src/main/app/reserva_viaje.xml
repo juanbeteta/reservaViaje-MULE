@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <http:request-config name="HTTP_Request_Configuration" host="localhost" port="3000" doc:name="HTTP Request Configuration"/>
+    <flow name="reserva_viajeFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/reserva" doc:name="HTTP"/>
+        <json:json-to-object-transformer doc:name="JSON to Object"/>
+        <set-variable variableName="reserva" value="#[payload]" doc:name="Variable"/>
+        <flow-ref name="reserva_avion" doc:name="Flow Reference"/>
+
+        
+    </flow>
+    <sub-flow name="reserva_avion">
+        <dw:transform-message doc:name="Transform Message" metadata:id="b3bad7d2-69a4-4ac6-bb0f-a2248c6486f4">
+            <dw:input-payload doc:sample="C:\Users\JuanMiguelBetetaTumb\Desktop\entrada.json"/>
+            <dw:input-variable mimeType="application/json" variableName="reserva"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json indent = false
+---
+{
+	reserva_id: flowVars.reserva.avion.reserva_id,
+	fecha_ida: flowVars.reserva.avion.fecha_ida,
+	fecha_regreso: flowVars.reserva.avion.fecha_regreso,
+	cantidad_personas: flowVars.reserva.avion.cantidad_personas,
+	lugar_origen: flowVars.reserva.avion.lugar_origen,
+	lugar_destino: flowVars.reserva.avion.lugar_destino,
+	precio: flowVars.reserva.avion.precio
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <http:request config-ref="HTTP_Request_Configuration" path="/avion/validar" method="POST" followRedirects="false" doc:name="HTTP">
+            <http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+            </http:request-builder>
+            <http:success-status-code-validator values="200..500"/>
+        </http:request>
+        <dw:transform-message doc:name="Transform Message" metadata:id="b8966238-625a-4db8-bb65-95d0c0e2a5e2">
+            <dw:input-payload mimeType="application/json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	allOk: payload.allOk as :boolean
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <choice doc:name="Choice">
+            <when expression="#[payload.allOk == 'true']">
+                <dw:transform-message doc:name="Transform Message" metadata:id="626842f2-e40f-4698-9dad-db79b31488ab">
+                    <dw:input-variable mimeType="application/json" variableName="reserva"/>
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	fecha_ida: flowVars.reserva.avion.fecha_ida,
+	fecha_regreso: flowVars.reserva.avion.fecha_regreso,
+	lugar_origen: flowVars.reserva.avion.lugar_origen,
+	lugar_destino: flowVars.reserva.avion.lugar_destino
+}]]></dw:set-payload>
+                </dw:transform-message>
+                <http:request config-ref="HTTP_Request_Configuration" path="/avion/disponibilidad" method="POST" doc:name="HTTP">
+                    <http:request-builder>
+                        <http:header headerName="Content-Type" value="application/json"/>
+                    </http:request-builder>
+                </http:request>
+            </when>
+            <otherwise>
+                <flow-ref name="error" doc:name="Flow Reference"/>
+            </otherwise>
+        </choice>
+    </sub-flow>
+    <sub-flow name="error">
+        <logger level="INFO" doc:name="Logger"/>
+    </sub-flow>
+</mule>
