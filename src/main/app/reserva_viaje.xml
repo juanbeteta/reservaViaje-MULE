@@ -16,12 +16,21 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
         <json:json-to-object-transformer doc:name="JSON to Object"/>
         <set-variable variableName="reserva" value="#[payload]" doc:name="Variable"/>
         <flow-ref name="reserva_avion" doc:name="Flow Reference"/>
+        <catch-exception-strategy doc:name="Catch Exception Strategy">
+            <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
+            <set-variable variableName="param" value="#[payload.codigo]" doc:name="Variable"/>
+            <http:request config-ref="HTTP_Request_Configuration" path="/error" method="GET" doc:name="HTTP_error">
+                <http:request-builder>
+                    <http:header headerName="codigo" value="#[flowVars.param]"/>
+                </http:request-builder>
+            </http:request>
+        </catch-exception-strategy>
 
         
     </flow>
     <sub-flow name="reserva_avion">
         <dw:transform-message doc:name="Transform Message" metadata:id="b3bad7d2-69a4-4ac6-bb0f-a2248c6486f4">
-            <dw:input-payload doc:sample="C:\Users\JuanMiguelBetetaTumb\Desktop\entrada.json"/>
+            <dw:input-payload/>
             <dw:input-variable mimeType="application/json" variableName="reserva"/>
             <dw:set-payload><![CDATA[%dw 1.0
 %output application/json indent = false
@@ -36,27 +45,15 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 	precio: flowVars.reserva.avion.precio
 }]]></dw:set-payload>
         </dw:transform-message>
-        <http:request config-ref="HTTP_Request_Configuration" path="/avion/validar" method="POST" followRedirects="false" doc:name="HTTP">
+        <http:request config-ref="HTTP_Request_Configuration" path="/avion/validar" method="POST" followRedirects="false" doc:name="HTTP_validar">
             <http:request-builder>
                 <http:header headerName="Content-Type" value="application/json"/>
             </http:request-builder>
-            <http:success-status-code-validator values="200..500"/>
         </http:request>
-        <dw:transform-message doc:name="Transform Message" metadata:id="b8966238-625a-4db8-bb65-95d0c0e2a5e2">
-            <dw:input-payload mimeType="application/json"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="9f233a7d-6a31-47bd-ade8-09cc01db999d">
+            <dw:input-variable mimeType="application/json" variableName="reserva"/>
             <dw:set-payload><![CDATA[%dw 1.0
-%output application/java
----
-{
-	allOk: payload.allOk as :boolean
-}]]></dw:set-payload>
-        </dw:transform-message>
-        <choice doc:name="Choice">
-            <when expression="#[payload.allOk == 'true']">
-                <dw:transform-message doc:name="Transform Message" metadata:id="626842f2-e40f-4698-9dad-db79b31488ab">
-                    <dw:input-variable mimeType="application/json" variableName="reserva"/>
-                    <dw:set-payload><![CDATA[%dw 1.0
-%output application/json
+%output application/json indent = false
 ---
 {
 	fecha_ida: flowVars.reserva.avion.fecha_ida,
@@ -64,19 +61,88 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 	lugar_origen: flowVars.reserva.avion.lugar_origen,
 	lugar_destino: flowVars.reserva.avion.lugar_destino
 }]]></dw:set-payload>
-                </dw:transform-message>
-                <http:request config-ref="HTTP_Request_Configuration" path="/avion/disponibilidad" method="POST" doc:name="HTTP">
+        </dw:transform-message>
+        <http:request config-ref="HTTP_Request_Configuration" path="/avion/disponibilidad" method="POST" doc:name="HTTP_disponibilidad">
+            <http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+            </http:request-builder>
+        </http:request>
+        <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
+        <set-variable variableName="precio_avion" value="#[payload]" doc:name="Variable"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="16a19e47-e007-497e-9fa4-e2918713dbb2">
+            <dw:input-variable mimeType="application/json" variableName="reserva"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	usuario: flowVars.reserva.login.usuario,
+	password: flowVars.reserva.login.password
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <http:request config-ref="HTTP_Request_Configuration" path="/usuario/verificar" method="POST" doc:name="HTTP_usuario_verificar">
+            <http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+            </http:request-builder>
+            <http:success-status-code-validator values="200..500"/>
+        </http:request>
+        <dw:transform-message doc:name="Transform Message" metadata:id="036120e0-ff1d-4865-879e-939e566e56f0">
+            <dw:input-payload doc:sample="C:\MTIS\workspaceAnypointStudio\reserva_viaje\json\s_avion_validar.json" mimeType="application/json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	allOk: payload.allOk,
+	descuento: payload.descuento
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <choice doc:name="Descuento???">
+            <when expression="#[payload.allOk == 'true' &amp;&amp; payload.descuento == 0]">
+                <http:request config-ref="HTTP_Request_Configuration" path="/avion/descuento" method="GET" doc:name="HTTP">
                     <http:request-builder>
-                        <http:header headerName="Content-Type" value="application/json"/>
+                        <http:header headerName="precio" value="#[flowVars.precio_avion.precio]"/>
                     </http:request-builder>
                 </http:request>
+                <dw:transform-message doc:name="Transform Message">
+                    <dw:input-payload doc:sample="sample_data\json_2.json"/>
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	descuento: payload.descuento
+}]]></dw:set-payload>
+                </dw:transform-message>
             </when>
             <otherwise>
-                <flow-ref name="error" doc:name="Flow Reference"/>
+                <dw:transform-message doc:name="Transform Message">
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	descuento: flowVars.precio_avion.precio
+}]]></dw:set-payload>
+                </dw:transform-message>
             </otherwise>
         </choice>
-    </sub-flow>
-    <sub-flow name="error">
-        <logger level="INFO" doc:name="Logger"/>
+        <set-variable variableName="descuento_avion" value="#[payload]" doc:name="descuento_avion"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="949a8dea-486f-4b3e-861f-8a8454186d1b">
+            <dw:input-variable mimeType="application/json" variableName="reserva"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	reserva_id: flowVars.reserva.avion.reserva_id,
+	fecha_ida: flowVars.reserva.avion.fecha_ida,
+	fecha_regreso: flowVars.reserva.avion.fecha_regreso,
+	cantidad_personas: flowVars.reserva.avion.cantidad_personas,
+	lugar_origen: flowVars.reserva.avion.lugar_origen,
+	lugar_destino: flowVars.reserva.avion.lugar_destino,
+	precio: flowVars.descuento_avion.descuento
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <http:request config-ref="HTTP_Request_Configuration" path="/avion/reservaAvion" method="POST" doc:name="HTTP">
+            <http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+            </http:request-builder>
+        </http:request>
     </sub-flow>
 </mule>
