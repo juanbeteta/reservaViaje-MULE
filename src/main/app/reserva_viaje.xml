@@ -10,9 +10,9 @@ http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee
 http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
 http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
     <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
-    <http:request-config name="HTTP_Request_Configuration" host="localhost" port="3000" doc:name="HTTP Request Configuration"/>
+    <http:request-config name="HTTP_Request_Configuration" host="localhost" port="3000" doc:name="HTTP Request Configuration" connectionIdleTimeout="100000"/>
     <flow name="reserva_viaje">
-        <http:listener config-ref="HTTP_Listener_Configuration" path="/reserva" doc:name="HTTP"/>
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/reserva" doc:name="HTTP" metadata:id="7f8b1f55-f556-4926-960f-0859593552d3"/>
         <json:json-to-object-transformer doc:name="JSON to Object"/>
 
         <set-variable variableName="reserva" value="#[payload]" doc:name="Variable"/>
@@ -360,7 +360,8 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 
             </http:request-builder>
         </http:request>
-        <dw:transform-message doc:name="Transform Message">
+        <dw:transform-message doc:name="Transform Message" metadata:id="67985c6f-32b4-4cd7-a593-b3e9268721a4">
+            <dw:input-variable mimeType="application/json" variableName="reserva"/>
             <dw:set-payload><![CDATA[%dw 1.0
 %output application/json
 ---
@@ -369,6 +370,10 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 	idReserva: flowVars.getReserva.viaje_id
 }]]></dw:set-payload>
         </dw:transform-message>
-        <http:request config-ref="HTTP_Request_Configuration" path="/notificacion/email" method="POST" doc:name="HTTP_email"/>
+        <http:request config-ref="HTTP_Request_Configuration" path="/notificacion/email" method="POST" doc:name="HTTP_email">
+            <http:request-builder>
+                <http:header headerName="Content-Type" value="application/json"/>
+            </http:request-builder>
+        </http:request>
     </sub-flow>
 </mule>
