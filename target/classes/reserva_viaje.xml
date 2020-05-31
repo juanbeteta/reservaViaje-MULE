@@ -11,11 +11,12 @@ http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/jso
 http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
     <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
     <http:request-config name="HTTP_Request_Configuration" host="localhost" port="3000" doc:name="HTTP Request Configuration"/>
-    <flow name="reserva_viajeFlow">
+    <flow name="reserva_viaje">
         <http:listener config-ref="HTTP_Listener_Configuration" path="/reserva" doc:name="HTTP"/>
         <json:json-to-object-transformer doc:name="JSON to Object"/>
+
         <set-variable variableName="reserva" value="#[payload]" doc:name="Variable"/>
-        <dw:transform-message doc:name="Copy_of_Transform Message" metadata:id="16a19e47-e007-497e-9fa4-e2918713dbb2">
+        <dw:transform-message doc:name="Transform Message" metadata:id="16a19e47-e007-497e-9fa4-e2918713dbb2">
             <dw:input-variable mimeType="application/json" variableName="reserva"/>
             <dw:set-payload><![CDATA[%dw 1.0
 %output application/json
@@ -25,13 +26,13 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 	password: flowVars.reserva.login.password
 }]]></dw:set-payload>
         </dw:transform-message>
-        <http:request config-ref="HTTP_Request_Configuration" path="/usuario/verificar" method="POST" doc:name="Copy_of_HTTP_usuario_verificar">
+        <http:request config-ref="HTTP_Request_Configuration" path="/usuario/verificar" method="POST" doc:name="Verificar Usuario">
             <http:request-builder>
                 <http:header headerName="Content-Type" value="application/json"/>
             </http:request-builder>
             <http:success-status-code-validator values="200..500"/>
         </http:request>
-        <dw:transform-message doc:name="Copy_of_Transform Message" metadata:id="036120e0-ff1d-4865-879e-939e566e56f0">
+        <dw:transform-message doc:name="Transform Message" metadata:id="036120e0-ff1d-4865-879e-939e566e56f0">
             <dw:input-payload doc:sample="C:\MTIS\workspaceAnypointStudio\reserva_viaje\json\s_avion_validar.json" mimeType="application/json"/>
             <dw:set-payload><![CDATA[%dw 1.0
 %output application/java
@@ -42,13 +43,17 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 }]]></dw:set-payload>
         </dw:transform-message>
         <set-variable variableName="usuario_registrado" value="#[payload]" doc:name="Variable"/>
-        <flow-ref name="reserva_avion" doc:name="Flow Reference"/>
+        <flow-ref name="reserva_avion" doc:name="Reserva avi&#243;n"/>
+        <flow-ref name="reserva_hotel" doc:name="Reserva Hotel"/>
+        <flow-ref name="reserva_coche" doc:name="Reserva Coche"/>
+        <flow-ref name="reserva_total" doc:name="Reserva Total"/>
         <catch-exception-strategy doc:name="Catch Exception Strategy">
             <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
             <set-variable variableName="param" value="#[payload.codigo]" doc:name="Variable"/>
-            <http:request config-ref="HTTP_Request_Configuration" path="/error" method="GET" doc:name="HTTP_error">
+            <http:request config-ref="HTTP_Request_Configuration" path="/notificacion/error" method="GET" doc:name="HTTP_error">
                 <http:request-builder>
-                    <http:header headerName="codigo" value="#[flowVars.param]"/>
+                    <http:query-param paramName="codigo" value="#[flowVars.param]"/>
+
                 </http:request-builder>
             </http:request>
         </catch-exception-strategy>
@@ -96,7 +101,7 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
         </http:request>
         <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
         <set-variable variableName="precio_avion" value="#[payload]" doc:name="Variable"/>
-        <choice doc:name="Descuento???">
+        <choice doc:name="Descuento?">
             <when expression="#[usuario_registrado.allOk == 'true' &amp;&amp; usuario_registrado.descuento == 1]">
                 <http:request config-ref="HTTP_Request_Configuration" path="/avion/descuento" method="GET" doc:name="HTTP">
                     <http:request-builder>
@@ -147,7 +152,7 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
         </http:request>
         <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
         <set-variable variableName="resultado_avion" value="#[payload]" doc:name="Variable"/>
-        <flow-ref name="reserva_hotel" doc:name="Flow Reference"/>
+
     </sub-flow>
     <sub-flow name="reserva_hotel">
         <dw:transform-message doc:name="Transform Message" metadata:id="d8a2a4f0-bb47-42d5-ab97-aae7ebd931b2">
@@ -184,7 +189,7 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
         </http:request>
         <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
         <set-variable variableName="precio_hotel" value="#[payload]" doc:name="Variable"/>
-        <choice doc:name="Descuento???">
+        <choice doc:name="Descuento?">
             <when expression="#[usuario_registrado.allOk == 'true' &amp;&amp; usuario_registrado.descuento == 1]">
                 <http:request config-ref="HTTP_Request_Configuration" path="/hotel/descuento" method="GET" doc:name="HTTP">
                     <http:request-builder>
@@ -233,7 +238,7 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
         </http:request>
         <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
         <set-variable variableName="resultado_hotel" value="#[payload]" doc:name="Variable"/>
-        <flow-ref name="reserva_coche" doc:name="Flow Reference"/>
+
     </sub-flow>
     <sub-flow name="reserva_coche">
         <dw:transform-message doc:name="Transform Message" metadata:id="7a8f01d9-f5e4-4c64-b5c9-1ea1c73e90dd">
@@ -273,7 +278,7 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
         </http:request>
         <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
         <set-variable variableName="precio_coche" value="#[payload]" doc:name="Variable"/>
-        <choice doc:name="Descuento???">
+        <choice doc:name="Descuento?">
             <when expression="#[usuario_registrado.allOk == 'true' &amp;&amp; usuario_registrado.descuento == 1]">
                 <http:request config-ref="HTTP_Request_Configuration" path="/coche/descuento" method="GET" doc:name="HTTP">
                     <http:request-builder>
@@ -325,7 +330,7 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
         </http:request>
         <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
         <set-variable variableName="resultado_coche" value="#[payload]" doc:name="Variable"/>
-        <flow-ref name="reserva_total" doc:name="Flow Reference"/>
+
     </sub-flow>
     <sub-flow name="reserva_total">
         <set-variable variableName="suma_total" value="#[flowVars.resultado_avion.precio  + flowVars.resultado_coche.precio + flowVars.resultado_hotel.precio]  " doc:name="Variable"/>
@@ -349,10 +354,21 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
         </http:request>
         <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
         <set-variable variableName="getReserva" value="#[payload]" doc:name="Variable"/>
-        <http:request config-ref="HTTP_Request_Configuration" path="/factura" method="GET" doc:name="HTTP">
+        <http:request config-ref="HTTP_Request_Configuration" path="/factura" method="GET" doc:name="HTTP_factura">
             <http:request-builder>
-                <http:header headerName="id" value="#[flowVars.getReserva.viaje_id]"/>
+                <http:query-param paramName="id" value="#[flowVars.getReserva.viaje_id]"/>
+
             </http:request-builder>
         </http:request>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	email: flowVars.reserva.login.usuario,
+	idReserva: flowVars.getReserva.viaje_id
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <http:request config-ref="HTTP_Request_Configuration" path="/notificacion/email" method="POST" doc:name="HTTP_email"/>
     </sub-flow>
 </mule>
