@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+<mule xmlns:cors="http://www.mulesoft.org/schema/mule/cors" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
 	xmlns:spring="http://www.springframework.org/schema/beans" 
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
@@ -8,11 +8,18 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
 http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
-http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/cors http://www.mulesoft.org/schema/mule/cors/current/mule-cors.xsd">
     <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
-    <http:request-config name="HTTP_Request_Configuration" host="localhost" port="3000" doc:name="HTTP Request Configuration" connectionIdleTimeout="100000"/>
+    <http:request-config name="HTTP_Request_Configuration" host="localhost" port="3000" doc:name="HTTP Request Configuration" connectionIdleTimeout="100000" responseTimeout="100000"/>
+    <cors:config name="Cors_Configuration" doc:name="Cors Configuration">
+        <cors:origins>
+            <cors:origin url="http://localhost:8080"/>
+        </cors:origins>
+    </cors:config>
     <flow name="reserva_viaje">
         <http:listener config-ref="HTTP_Listener_Configuration" path="/reserva" doc:name="HTTP" metadata:id="7f8b1f55-f556-4926-960f-0859593552d3"/>
+        <cors:validate config-ref="Cors_Configuration" publicResource="true" acceptsCredentials="false" doc:name="CORS Validate"/>
         <json:json-to-object-transformer doc:name="JSON to Object"/>
 
         <set-variable variableName="reserva" value="#[payload]" doc:name="Variable"/>
@@ -68,7 +75,6 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 %output application/json indent = false
 ---
 {
-	reserva_id: flowVars.reserva.avion.reserva_id,
 	fecha_ida: flowVars.reserva.avion.fecha_ida,
 	fecha_regreso: flowVars.reserva.avion.fecha_regreso,
 	cantidad_personas: flowVars.reserva.avion.cantidad_personas,
@@ -136,7 +142,6 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 %output application/json
 ---
 {
-	reserva_id: flowVars.reserva.avion.reserva_id,
 	fecha_ida: flowVars.reserva.avion.fecha_ida,
 	fecha_regreso: flowVars.reserva.avion.fecha_regreso,
 	cantidad_personas: flowVars.reserva.avion.cantidad_personas,
@@ -223,7 +228,7 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 %output application/json
 ---
 {
-	reserva_id: flowVars.reserva.hotel.reserva_id,
+	
     fecha_checkin: flowVars.reserva.hotel.fecha_checkin,
     fecha_checkout: flowVars.reserva.hotel.fecha_checkout,
     tipo_habitacion: flowVars.reserva.hotel.tipo_habitacion,
@@ -314,7 +319,7 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 %output application/json
 ---
 {
-	reserva_id: flowVars.reserva.coche.reserva_id,
+	
 	fecha_recogida:flowVars.reserva.coche.fecha_recogida,
 	fecha_devolucion: flowVars.reserva.coche.fecha_devolucion,
 	lugar_recogida: flowVars.reserva.coche.lugar_recogida,
@@ -341,7 +346,7 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 ---
 {
 	usuario: flowVars.reserva.login.usuario,
-	vuelo_id: flowVars.resultado_coche.coche_id,
+	vuelo_id: flowVars.resultado_avion.avion_id,
 	hotel_id: flowVars.resultado_hotel.hotel_id,
 	coche_id: flowVars.resultado_coche.coche_id,
 	precio: flowVars.suma_total
@@ -362,6 +367,7 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
         </http:request>
         <dw:transform-message doc:name="Transform Message" metadata:id="67985c6f-32b4-4cd7-a593-b3e9268721a4">
             <dw:input-variable mimeType="application/json" variableName="reserva"/>
+            <dw:input-variable variableName="getReserva"/>
             <dw:set-payload><![CDATA[%dw 1.0
 %output application/json
 ---
