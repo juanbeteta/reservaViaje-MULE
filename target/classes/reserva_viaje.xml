@@ -96,6 +96,7 @@ http://www.mulesoft.org/schema/mule/cors http://www.mulesoft.org/schema/mule/cor
 {
 	fecha_ida: flowVars.reserva.avion.fecha_ida,
 	fecha_regreso: flowVars.reserva.avion.fecha_regreso,
+	personas: flowVars.reserva.avion.cantidad_personas,
 	lugar_origen: flowVars.reserva.avion.lugar_origen,
 	lugar_destino: flowVars.reserva.avion.lugar_destino
 }]]></dw:set-payload>
@@ -307,7 +308,7 @@ http://www.mulesoft.org/schema/mule/cors http://www.mulesoft.org/schema/mule/cor
 %output application/java
 ---
 {
-	descuento: flowVars.precio_hotel.precio
+	descuento: flowVars.precio_coche.precio
 }]]></dw:set-payload>
                 </dw:transform-message>
             </otherwise>
